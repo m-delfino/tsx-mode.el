@@ -13,7 +13,6 @@
 ;;; Code:
 
 
-(require 'eglot)
 (require 'seq)
 (require 'treesit)
 (require 'typescript-ts-mode)
@@ -78,19 +77,6 @@ turn that tag into separate opening and closing tags."
   "Whether or not to configure custom keyboard shortcuts."
   :type 'boolean
   :group 'tsx-mode)
-
-(defcustom tsx-mode-use-lsp
-  t
-  "Whether or not to configure a Language Server Protocol server and client."
-  :type 'boolean
-  :group 'tsx-mode)
-
-(defcustom tsx-mode-use-own-documentation-strategy
-  t
-  "Whether or not to configure how help text is displayed."
-  :type 'boolean
-  :group 'tsx-mode)
-
 
 (define-obsolete-variable-alias
   'tsx-mode-tsx-auto-tags 'tsx-mode-use-jsx-auto-tags
@@ -304,25 +290,6 @@ enabled."
   (when tsx-mode-use-code-folding
     (origami-toggle-all-nodes buffer)))
 
-
-(defun tsx-mode--eglot-configure ()
-  "Internal function.  Configures some eglot-related variables after that minor
-mode has been enabled."
-  ;; eglot adds its own capf to the head of `completion-at-point-functions'
-  ;; which always returns something, meaning other capfs never get invoked.
-  ;; that is not what we want for css-in-js-mode
-  (setq-local
-   completion-at-point-functions
-   '(css-in-js-mode--capf eglot-completion-at-point t))
-  ;; eglot sets its own value for `eldoc-documentation-strategy' which causes
-  ;; diagnostic messages to be hidden in favor of docstrings.  show both instead
-  (when tsx-mode-use-own-documentation-strategy
-    (tsx-mode--debug "configuring eldoc-documentation-strategy")
-    (setq-local
-     eldoc-documentation-strategy
-     'eldoc-documentation-compose)))
-
-
 ;;;###autoload
 (define-derived-mode
   tsx-mode tsx-ts-mode "TSX"
@@ -372,12 +339,6 @@ mode has been enabled."
     (tsx-mode--debug "configuring css-in-js-mode")
     (css-in-js-mode-fetch-shared-library)
     (css-in-js-mode t))
-  (when tsx-mode-use-lsp
-    (add-hook
-     'eglot-managed-mode-hook
-     #'tsx-mode--eglot-configure
-     nil t)
-    (eglot-ensure))
   ;; some extra tsx indent rules until emacs gets patched
   (setf
    (cdr (assoc 'tsx treesit-simple-indent-rules))
@@ -390,12 +351,6 @@ mode has been enabled."
       ((parent-is "export_clause") parent-bol typescript-ts-mode-indent-offset)
       )))
   (treesit-major-mode-setup))
-
-;;;###autoload
-(add-to-list
- 'eglot-server-programs
- '(tsx-mode "typescript-language-server" "--stdio"))
-
 
 (provide 'tsx-mode)
 ;;; tsx-mode.el ends here
